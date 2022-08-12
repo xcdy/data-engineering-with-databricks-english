@@ -34,9 +34,15 @@
 -- COMMAND ----------
 
 -- TODO
-CREATE <FILL-IN>
-AS SELECT <FILL-IN>
-  FROM cloud_files("${source}", "json", map("cloudFiles.schemaHints", "time DOUBLE"))
+CREATE OR REFRESH STREAMING LIVE TABLE recordings_bronze
+AS SELECT 
+    device_id, 
+    mrn, 
+    time, 
+    heartrate,
+    cast(input_file_name() as STRING) as source_file,
+    cast(current_timestamp() as TIMESTAMP) as receipt_time
+  FROM cloud_files("${source}", "json", map("cloudFiles.schemaHints", "device_id INT, mrn long, time DOUBLE, heartrate DOUBLE, source_file STRING, receipt_time TIMESTAMP"))
 
 -- COMMAND ----------
 
@@ -59,9 +65,9 @@ AS SELECT <FILL-IN>
 -- COMMAND ----------
 
 -- TODO
-CREATE <FILL-IN> pii
+CREATE OR REFRESH STREAMING LIVE TABLE pii
 AS SELECT *
-  FROM cloud_files("${datasets_path}/healthcare/patient", "csv", map(<FILL-IN>))
+  FROM cloud_files("${datasets_path}/healthcare/patient", "csv", map("header", "true", "cloudFiles.inferColumnTypes", "true"))
 
 -- COMMAND ----------
 
@@ -87,15 +93,23 @@ AS SELECT *
 -- COMMAND ----------
 
 -- TODO
-CREATE OR REFRESH STREAMING LIVE TABLE recordings_enriched
-  (<FILL-IN add a constraint to drop records when heartrate ! > 0>)
+CREATE OR REFRESH STREAMING LIVE TABLE recordings_enriched (
+  CONSTRAINT valid_heartrate EXPECT (heartrate > 0) ON VIOLATION DROP ROW
+)
+--   (<FILL-IN add a constraint to drop records when heartrate ! > 0>)
 AS SELECT 
-  CAST(<FILL-IN>) device_id, 
-  <FILL-IN mrn>, 
-  <FILL-IN heartrate>, 
-  CAST(FROM_UNIXTIME(DOUBLE(time), 'yyyy-MM-dd HH:mm:ss') AS TIMESTAMP) time 
-  FROM STREAM(live.recordings_bronze)
-  <FILL-IN specify source and perform inner join with pii on mrn>
+--   CAST(<FILL-IN>) device_id, 
+--   <FILL-IN mrn>, 
+--   <FILL-IN heartrate>, 
+  r.device_id,
+  r.mrn,
+  r.heartrate,
+  CAST(FROM_UNIXTIME(DOUBLE(time), 'yyyy-MM-dd HH:mm:ss') AS TIMESTAMP) time,
+  p.name
+  FROM STREAM(LIVE.recordings_bronze) r
+  LEFT JOIN LIVE.pii p 
+    ON r.mrn = p.mrn
+--   <FILL-IN specify source and perform inner join with pii on mrn>
 
 -- COMMAND ----------
 
@@ -116,9 +130,12 @@ AS SELECT
 -- COMMAND ----------
 
 -- TODO
-CREATE <FILL-IN> daily_patient_avg
-  COMMENT <FILL-IN insert comment here>
-AS SELECT <FILL-IN>
+CREATE OR REFRESH LIVE TABLE daily_patient_avg
+  COMMENT 'patient daily average heart rate'
+AS 
+  SELECT mrn, name, avg(heartrate) AS avg_heartrate, date(time) as `date`
+  FROM LIVE.recordings_enriched
+  GROUP BY mrn, name, `date`
 
 -- COMMAND ----------
 

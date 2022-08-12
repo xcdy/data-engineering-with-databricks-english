@@ -72,6 +72,8 @@ print_pipeline_config()
 # MAGIC     * Click **`Add configuration`**
 # MAGIC     * Enter the word **`source`** in the **Key** field
 # MAGIC     * Enter the **Source** value specified above to the **`Value`** field
+# MAGIC     * Enter the word **`datasets_path`** in the **Key** field
+# MAGIC     * Enter the **DA.paths.datasets** value specified above to the **`Value`** field
 # MAGIC 1. In the **Target** field, specify the database name printed out next to **Target** in the cell above.<br/>
 # MAGIC This should follow the pattern **`dbacademy_<username>_dewd_jobs_lab_92`**
 # MAGIC 1. In the **Storage location** field, copy the directory as printed above.

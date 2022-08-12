@@ -29,6 +29,11 @@ display(files)
 
 # COMMAND ----------
 
+files = dbutils.fs.ls(f"{DA.paths.storage_location}/checkpoints/")
+display(files)
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC 
 # MAGIC 
