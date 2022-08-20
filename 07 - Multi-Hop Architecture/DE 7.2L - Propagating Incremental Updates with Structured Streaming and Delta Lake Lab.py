@@ -47,12 +47,14 @@ customers_checkpoint_path = f"{DA.paths.checkpoints}/customers"
 dataset_source = f"{DA.paths.datasets}/retail-org/customers/"
 
 query = (spark
-  .readStream
-  <FILL-IN>
-  .load(dataset_source)
-  .writeStream
-  <FILL-IN>
-  .table("bronze")
+         .readStream
+         .format('cloudfiles')
+         .option('cloudfiles.format', 'csv')
+         .option('cloudfiles.schemaLocation')
+         .load(dataset_source)
+         .writeStream
+         <FILL-IN>
+         .table("bronze")
 )
 
 # COMMAND ----------

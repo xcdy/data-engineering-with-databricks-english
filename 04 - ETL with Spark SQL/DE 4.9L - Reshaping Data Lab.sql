@@ -46,6 +46,14 @@
 
 -- COMMAND ----------
 
+select * from events
+
+-- COMMAND ----------
+
+select * from transactions
+
+-- COMMAND ----------
+
 -- MAGIC %md
 -- MAGIC 
 -- MAGIC 
@@ -85,11 +93,18 @@
 -- COMMAND ----------
 
 -- TODO
-CREATE OR REPLACE VIEW events_pivot
-<FILL_IN>
-("cart", "pillows", "login", "main", "careers", "guest", "faq", "down", "warranty", "finalize", 
+CREATE OR REPLACE VIEW events_pivot as
+select * from (
+  select user_id as user, event_name
+  from events
+)
+pivot(count(*) for event_name in ("cart", "pillows", "login", "main", "careers", "guest", "faq", "down", "warranty", "finalize", 
 "register", "shipping_info", "checkout", "mattresses", "add_item", "press", "email_coupon", 
-"cc_info", "foam", "reviews", "original", "delivery", "premium")
+"cc_info", "foam", "reviews", "original", "delivery", "premium"))
+
+-- COMMAND ----------
+
+select * from events_pivot
 
 -- COMMAND ----------
 
@@ -106,6 +121,11 @@ CREATE OR REPLACE VIEW events_pivot
 -- MAGIC     assert spark.table(table_name), f"Table named **`{table_name}`** does not exist"
 -- MAGIC     assert spark.table(table_name).columns == column_names, "Please name the columns in the order provided above"
 -- MAGIC     assert spark.table(table_name).count() == num_rows, f"The table should have {num_rows} records"
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC spark.table('events_pivot').columns
 
 -- COMMAND ----------
 
@@ -157,9 +177,13 @@ CREATE OR REPLACE VIEW events_pivot
 
 -- COMMAND ----------
 
+desc extended transactions
+
+-- COMMAND ----------
+
 -- TODO
-CREATE OR REPLACE VIEW clickpaths AS
-<FILL_IN>
+CREATE OR REPLACE VIEW clickpaths as
+select * from events_pivot e join transactions t on e.user = t.user_id
 
 -- COMMAND ----------
 
@@ -196,11 +220,17 @@ CREATE OR REPLACE VIEW clickpaths AS
 
 -- COMMAND ----------
 
+desc sales
+
+-- COMMAND ----------
+
 -- TODO
 CREATE OR REPLACE TABLE sales_product_flags AS
-<FILL_IN>
-EXISTS <FILL_IN>.item_name LIKE "%Mattress"
-EXISTS <FILL_IN>.item_name LIKE "%Pillow"
+  select 
+    items,
+    EXISTS(items, x -> x.item_name LIKE "%Mattress") as mattress,
+    EXISTS(items, x -> x.item_name LIKE "%Pillow") as pillow
+  from sales
 
 -- COMMAND ----------
 
@@ -214,7 +244,7 @@ EXISTS <FILL_IN>.item_name LIKE "%Pillow"
 
 -- MAGIC %python
 -- MAGIC check_table_results("sales_product_flags", ['items', 'mattress', 'pillow'], 10539)
--- MAGIC product_counts = spark.sql("SELECT sum(CAST(mattress AS INT)) num_mattress, sum(CAST(pillow AS INT)) num_pillow FROM sales_product_flags").first().asDict()
+-- MAGIC product_counts = spark.sql("SELECT sum(CAST(mattress AS INT)) num_mattress›, sum(CAST(pillow AS INT)) num_pillow FROM sales_product_flags").first().asDict()
 -- MAGIC assert product_counts == {'num_mattress': 10015, 'num_pillow': 1386}, "There should be 10015 rows where mattress is true, and 1386 where pillow is true"
 
 -- COMMAND ----------

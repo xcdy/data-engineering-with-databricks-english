@@ -69,7 +69,16 @@
 -- COMMAND ----------
 
 -- TODO
-<FILL_IN> ${da.paths.datasets}/ecommerce/raw/events-kafka/
+create external table events_json (
+`key` binary,
+`offset` long,
+`partition` integer,
+`timestamp` long,
+`topic` string,
+`value` binary
+)
+using json
+location '${da.paths.datasets}/ecommerce/raw/events-kafka/'
 
 -- COMMAND ----------
 
@@ -100,7 +109,15 @@
 -- COMMAND ----------
 
 -- TODO
-<FILL_IN>
+create table events_raw (
+`key` binary,
+`offset` long,
+`partition` integer,
+`timestamp` long,
+`topic` string,
+`value` binary
+)
+using delta
 
 -- COMMAND ----------
 
@@ -129,7 +146,7 @@
 -- COMMAND ----------
 
 -- TODO
-<FILL_IN>
+insert overwrite events_raw select * from events_json
 
 -- COMMAND ----------
 
@@ -141,7 +158,7 @@
 -- COMMAND ----------
 
 -- TODO
-<FILL_IN>
+select * from events_raw
 
 -- COMMAND ----------
 
@@ -170,7 +187,11 @@
 -- COMMAND ----------
 
 -- TODO
-<FILL_IN> ${da.paths.datasets}/ecommerce/raw/item-lookup
+create table item_lookup as select * from parquet.`${da.paths.datasets}/ecommerce/raw/item-lookup`
+
+-- COMMAND ----------
+
+select * from item_lookup
 
 -- COMMAND ----------
 
@@ -183,8 +204,13 @@
 -- COMMAND ----------
 
 -- MAGIC %python
+-- MAGIC set(row['item_id'] for row in spark.table("item_lookup").select("item_id").limit(5).collect())
+
+-- COMMAND ----------
+
+-- MAGIC %python
 -- MAGIC assert spark.table("item_lookup").count() == 12, "The table should have 12 records"
--- MAGIC assert set(row['item_id'] for row in spark.table("item_lookup").select("item_id").limit(5).collect()) == {'M_PREM_F', 'M_PREM_K', 'M_PREM_Q', 'M_PREM_T', 'M_STAN_F'}, "Make sure you have not modified the data provided"
+-- MAGIC assert set(row['item_id'] for row in spark.table("item_lookup").select("item_id").limit(5).collect()) == {'M_PREM_Q', 'M_STAN_F', 'P_DOWN_K', 'P_FOAM_K', 'P_FOAM_S'}, "Make sure you have not modified the data provided"
 
 -- COMMAND ----------
 
