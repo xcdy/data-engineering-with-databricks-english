@@ -50,12 +50,18 @@ query = (spark
          .readStream
          .format('cloudfiles')
          .option('cloudfiles.format', 'csv')
-         .option('cloudfiles.schemaLocation')
+         .option('cloudfiles.schemaLocation', customers_checkpoint_path)
          .load(dataset_source)
          .writeStream
-         <FILL-IN>
+         .format('delta')
+         .outputMode('append')
+         .option('checkpointLocation', customers_checkpoint_path)
          .table("bronze")
 )
+
+# COMMAND ----------
+
+display(dbutils.fs.ls(customers_checkpoint_path))
 
 # COMMAND ----------
 
@@ -106,7 +112,16 @@ assert spark.table("bronze").dtypes ==  [('customer_id', 'string'), ('tax_id', '
 # MAGIC -- TODO
 # MAGIC CREATE OR REPLACE TEMPORARY VIEW bronze_enhanced_temp AS
 # MAGIC SELECT
-# MAGIC   <FILL-IN>
+# MAGIC   *,
+# MAGIC   now() as receipt_time,
+# MAGIC   input_file_name() as source_file
+# MAGIC from bronze_temp
+# MAGIC where postcode != 0
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from bronze_enhanced_temp
 
 # COMMAND ----------
 
@@ -136,8 +151,11 @@ assert spark.table("bronze_enhanced_temp").isStreaming, "Not a streaming table"
 silver_checkpoint_path = f"{DA.paths.checkpoints}/silver"
 
 query = (spark.table("bronze_enhanced_temp")
-  <FILL-IN>
-  .table("silver"))
+         .writeStream
+         .format('delta')
+         .option('checkpointLocation', silver_checkpoint_path)
+         .outputMode('append')
+         .table("silver"))
 
 # COMMAND ----------
 
@@ -186,8 +204,9 @@ assert spark.table("silver").filter("postcode <= 0").count() == 0, "Null postcod
 # MAGIC %sql
 # MAGIC -- TODO
 # MAGIC CREATE OR REPLACE TEMPORARY VIEW customer_count_temp AS
-# MAGIC SELECT 
-# MAGIC <FILL-IN>
+# MAGIC SELECT state, count(customer_id) as customer_count
+# MAGIC from silver_temp
+# MAGIC group by state
 
 # COMMAND ----------
 
@@ -214,10 +233,12 @@ assert spark.table("customer_count_temp").dtypes ==  [('state', 'string'), ('cus
 customers_count_checkpoint_path = f"{DA.paths.checkpoints}/customers_counts"
 
 query = (spark
-  .table("customer_count_temp")
-  .writeStream
-  <FILL-IN>
-  .table("gold_customer_count_by_state"))
+         .table("customer_count_temp")
+         .writeStream
+         .format('delta')
+         .outputMode('complete')
+         .option('checkpointLocation', customers_count_checkpoint_path)
+         .table("gold_customer_count_by_state"))
 
 # COMMAND ----------
 
